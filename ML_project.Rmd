@@ -1,0 +1,92 @@
+# Title: Machine Learning Course Project 
+
+## Background inforamtion: 
+Six participants wearing accelerometers on their belt, forearm, arm, and dumbell were asked to perform barbell lifts correctly and incorrectly in 5 different ways. Our goal is to predict the manner in which they did the exercise. Both training and testing data sets are from the website: http://groupware.les.inf.puc-rio.br/har 
+
+## Load library
+```{r echo=FALSE}
+library(dplyr)
+library(caret)
+library(rattle)
+library(rpart)
+library(data.table)
+```
+## Data source 
+```{r echo=TRUE}
+url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+training <- fread(url)
+
+url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+testing <- fread(url)
+```
+
+## Data cleaning. 
+Remove variables with all missing values. Remove ID varaibles. 
+```{r echo=TRUE}
+isAnyMissing <- sapply(training, function (x) any(is.na(x) | x == ""))
+keepVariable <- names(isAnyMissing)[!isAnyMissing]
+keepVariable <- keepVariable[-c(1,2)]
+
+```
+### subset primary dataset with only related varialbes and outcome varialbe classe.
+```{r echo=TRUE}
+trainSet <- select_(training, .dots = keepVariable)
+testSet <- select_(testing, .dots = keepVariable[-58])
+```
+
+## Create training and testing 
+```{r echo=TRUE}
+set.seed(1234)
+inTrain = createDataPartition(trainSet$classe, p = 0.6)[[1]]
+myTraining = trainSet[ inTrain,]
+myTesting = trainSet[-inTrain,]
+```
+## Building models
+### Method: random forest
+```{r echo=TRUE}
+set.seed(1234)
+controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modelRF <- train(classe ~ ., data=myTraining, method="rf", trControl=controlRF)
+modelRF$finalModel
+
+predictRF <- predict(modelRF, newdata=myTesting)
+confMatRF<- confusionMatrix(predictRF, myTesting$classe)
+confMatRF
+```
+### Method: Decision Trees
+```{r echo=TRUE}
+set.seed(1234)
+modelDT <- rpart(classe ~ ., data=myTraining, method="class")
+fancyRpartPlot(modelDT)
+
+predictDT <- predict(modelDT, newdata=myTesting, type="class")
+confMatDT <- confusionMatrix(predictDT, myTesting$classe)
+confMatDT
+ 
+```                  
+### Method: Generalized Boosted Model
+```{r echo=TRUE}
+set.seed(1234)
+controlGBM <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+modelGBM  <- train(classe ~ ., data=myTraining, method = "gbm",
+                    trControl = controlGBM, verbose = FALSE)
+modelGBM$finalModel
+
+predictGBM <- predict(modelGBM, newdata=myTesting)
+confMatGBM <- confusionMatrix(predictGBM, myTesting$classe)
+confMatGBM
+```
+     
+### Which model is more accurate
+Comparing the three modesl used here: random forest, decision tree and generalized boosted model, we can see that random forest yield better accuracy. Thus we will use it to further predict our testing set. 
+```{r echo=TRUE}
+confMatRF$overall[1]
+confMatDT$overall[1]
+confMatGBM$overall[1]
+```
+
+## Making Test Set Predictions.
+```{r echo=TRUE}
+predictTEST <- predict(modelRF, newdata=testing)
+predictTEST
+```

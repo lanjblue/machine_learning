@@ -1,0 +1,104 @@
+# Machine Learning Quiz 2
+
+### 1. Load the Alzheimer's disease data. Which of the following commands will create non-overlapping training and test sets with about 50% of the observations assigned to each?
+
+```{r echo=TRUE}
+#install.packages("AppliedPredictiveModeling")
+#install.packages("caret")
+library(AppliedPredictiveModeling)
+library(caret)
+library(Hmisc)
+library(dplyr)
+data(AlzheimerDisease)
+
+adData = data.frame(diagnosis,predictors)
+trainIndex = createDataPartition(diagnosis, p = 0.50,list=FALSE)
+training = adData[trainIndex,]
+testing = adData[-trainIndex,]
+```
+
+### 2. Load the cement data. Make a plot of the outcome (CompressiveStrength) versus the index of the samples. Color by each of the variables in the data set (you may find the cut2() function in the Hmisc package useful for turning continuous covariates into factors). What do you notice in these plots?
+```{r echo=TRUE}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(1000)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p = 3/4)[[1]]
+training = mixtures[ inTrain,]
+testing = mixtures[-inTrain,]
+```
+
+Make a plot for index vs CompressivesStrength
+```{r echo=TRUE}
+index <- seq_along(1:nrow(training))
+ggplot(data = training, aes(x = index, y = CompressiveStrength)) + geom_point() + 
+    theme_bw()
+```
+
+Plot index vs CompressivesStrength by other variables
+```{r echo=TRUE}
+breaks <- 4
+training <- mutate(training, index=1:nrow(training))
+cutIndex <- cut2(training$index, g=breaks)
+qplot(index, CompressiveStrength, data=training, color=cut2(training$Cement, g=breaks))
+qplot(index, CompressiveStrength, data=training, color=cut2(training$BlastFurnaceSlag, g=breaks))
+qplot(index, CompressiveStrength, data=training, color=cut2(training$FlyAsh, g=breaks))
+qplot(index, CompressiveStrength, data=training, color=cut2(training$Water, g=breaks))
+qplot(index, CompressiveStrength, data=training, color=cut2(training$Superplasticizer, g=breaks))
+qplot(index, CompressiveStrength, data=training, color=cut2(training$CoarseAggregate, g=breaks))
+qplot(index, CompressiveStrength, data=training, color=cut2(training$FineAggregate, g=breaks))
+qplot(index, CompressiveStrength, data=training, color=cut2(training$Age, g=breaks))
+```
+
+### 3. Load the cement data. Make a histogram and confirm the SuperPlasticizer variable is skewed. Normally you might use the log transform to try to make the data more symmetric. Why would that be a poor choice for this variable?
+```{r echo=TRUE}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(1000)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p = 3/4)[[1]]
+training = mixtures[ inTrain,]
+testing = mixtures[-inTrain,]
+hist(training$Superplasticizer)
+hist(log(training$Superplasticizer+1))
+```
+
+### 4. Load the Alzheimer's disease data. Find all the predictor variables in the training set that begin with IL. Perform principal components on these variables with the preProcess() function from the caret package. Calculate the number of principal components needed to capture 90% of the variance. How many are there?
+```{r echo=TRUE}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+
+tr <- training[,grep("^IL", names(training))]
+preProcess(t, method="pca", thres=0.9)
+```
+
+### 5. Load the Alzheimer's disease data. Create a training data set consisting of only the predictors with variable names beginning with IL and the diagnosis. Build two predictive models, one using the predictors as they are and one using PCA with principal components explaining 80% of the variance in the predictors. Use method="glm" in the train function. What is the accuracy of each method in the test set? Which is more accurate?
+```{r echo=TRUE}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+
+tr <- data.frame(diagnosis=training$diagnosis, training[,grep("^IL", names(training))])
+te <- data.frame(diagnosis=testing$diagnosis, testing[,grep("^IL", names(testing))])
+
+# linear model 
+fit1 <- train(diagnosis ~ ., data=tr, method="glm")
+pred1 <- predict(fit1, te)
+confusionMatrix(pred1, te$diagnosis)
+
+# PCA
+fit2 <- preProcess(tr[-1], method='pca', thres=0.8)
+pred2 <- predict(fit2, te[-1])
+confusionMatrix(pred2, te$diagnosis)
+```
