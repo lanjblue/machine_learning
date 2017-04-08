@@ -1,10 +1,12 @@
+---
+output: md_document
+---
 # Title: Machine Learning Course Project 
-
 ## Background inforamtion: 
 Six participants wearing accelerometers on their belt, forearm, arm, and dumbell were asked to perform barbell lifts correctly and incorrectly in 5 different ways. Our goal is to predict the manner in which they did the exercise. Both training and testing data sets are from the website: http://groupware.les.inf.puc-rio.br/har 
 
 ## Load library
-```{r echo=FALSE}
+```{r echo=FALSE, cache=FALSE, results='hide', warning=FALSE, comment=FALSE}
 library(dplyr)
 library(caret)
 library(rattle)
